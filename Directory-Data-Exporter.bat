@@ -21,7 +21,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $BasePath = (Get-Location).Path
 $OutputFile = Join-Path -Path $BasePath -ChildPath 'content.txt'
-$TempZipBase = Join-Path -Path $env:TEMP -ChildPath ("ExtratorZIP_$([guid]::NewGuid())")
+$TempZipBase = Join-Path -Path $env:TEMP -ChildPath ("ZipExtractor_$([guid]::NewGuid())")
 $ScriptName = $env:SCRIPT_NAME
 
 $Writer = [System.IO.StreamWriter]::new($OutputFile, $false, [System.Text.Encoding]::UTF8)
@@ -30,6 +30,10 @@ $Writer.WriteLine("$(Split-Path $BasePath -Leaf)/")
 function Test-IsTextFile {
     param([string]$Path)
     try {
+        $BinaryExtensions = @('.pdf', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.mp3', '.mp4', '.wav', '.avi', '.mkv', '.mov', '.exe', '.dll', '.bin', '.iso', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.7z', '.rar', '.tar', '.gz')
+        $Extension = [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
+        if ($BinaryExtensions -contains $Extension) { return $false }
+
         if ((Get-Item -LiteralPath $Path).Length -eq 0) { return $false }
         
         if ($PSVersionTable.PSVersion.Major -ge 6) {
