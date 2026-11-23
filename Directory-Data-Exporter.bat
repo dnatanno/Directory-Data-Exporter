@@ -29,22 +29,31 @@ $Writer.WriteLine("$(Split-Path $BasePath -Leaf)/")
 
 function Test-IsTextFile {
     param([string]$Path)
+    $Stream = $null
+    $Reader = $null
     try {
-        $BinaryExtensions = @('.pdf', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.mp3', '.mp4', '.wav', '.avi', '.mkv', '.mov', '.exe', '.dll', '.bin', '.iso', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.7z', '.rar', '.tar', '.gz')
-        $Extension = [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
-        if ($BinaryExtensions -contains $Extension) { return $false }
+        $Stream = [System.IO.File]::OpenRead($Path)
+        if ($Stream.Length -eq 0) { return $false }
 
-        if ((Get-Item -LiteralPath $Path).Length -eq 0) { return $false }
-        
-        if ($PSVersionTable.PSVersion.Major -ge 6) {
-            $Bytes = Get-Content -LiteralPath $Path -AsByteStream -TotalCount 1024 -ErrorAction Stop
-        } else {
-            $Bytes = Get-Content -LiteralPath $Path -Encoding Byte -TotalCount 1024 -ErrorAction Stop
+        $Utf8Strict = [System.Text.UTF8Encoding]::new($false, $true)
+        $Reader = [System.IO.StreamReader]::new($Stream, $Utf8Strict)
+        $Buffer = New-Object char[] 8192
+
+        while (($ReadCount = $Reader.Read($Buffer, 0, $Buffer.Length)) -gt 0) {
+            for ($i = 0; $i -lt $ReadCount; $i++) {
+                $Code = [int]$Buffer[$i]
+                if ($Code -eq 0 -or ($Code -lt 32 -and $Code -ne 9 -and $Code -ne 10 -and $Code -ne 13)) {
+                    return $false
+                }
+            }
         }
-        
-        return ($Bytes -notcontains 0)
+
+        return $true
     } catch {
         return $false
+    } finally {
+        if ($null -ne $Reader) { $Reader.Dispose() }
+        if ($null -ne $Stream) { $Stream.Dispose() }
     }
 }
 
